@@ -1,0 +1,190 @@
+<head>
+  <title>prooflog</title>
+</head>
+
+<body>
+  <div class="alert-container">
+    {{> bootstrapAlerts}}
+  </div>
+  <div class="container">
+    {{> loginButtons}}
+    <!-- {{> scrollBar}} -->
+    {{#with currentUser}}
+      {{#if profile.confirmed}}
+        {{#unless profile.isCA}}
+          <h1 data-scroll-index="0">Report a proof</h1>
+          {{> reportProof}}
+          <br /><br />
+        {{/unless}}
+        {{#if pending.count}}
+          <h1 data-scroll-index="1">Pending requests</h1>
+          <ul>
+            {{#each pending}}
+              {{> request}}
+            {{/each}}
+          </ul>
+          <br /><br />
+        {{/if}}
+        {{#unless profile.isCA}}
+          <h1>Points (confirmed): {{points}}</h1>
+          <br />
+        {{/unless}}
+        {{#if presented.count}}
+          <h1 data-scroll-index="2">Presented proofs</h1>
+          <ul>
+            {{#each presented}}
+              {{> presentedProof}}
+            {{/each}}
+          </ul>
+          <br /><br />
+        {{/if}}
+        {{#if heard.count}}
+          <h1 data-scroll-index="3">Heard proofs</h1>
+          <ul>
+            {{#each heard}}
+              {{> heardProof}}
+            {{/each}}
+          </ul>
+          <br />
+        {{/if}}
+        {{#if profile.isAdmin}}
+          {{> admin}}
+          <br /><br />
+        {{/if}}
+      {{else}}
+        Waiting for account to be confirmed...
+      {{/if}}
+    {{/with}}
+  </div>
+</body>
+
+<template name="presentedProof">
+  <li>
+    <span class="text">{{no}}: {{presentedTo}} ({{points}} points)</span>
+    {{#unless confirmed}}
+      <button class="delete">&times; Withdraw</button>
+    {{else}}
+      <span class="confirmed">Confirmed</span>
+    {{/unless}}
+  </li>
+</template>
+
+<template name="heardProof">
+  <li>
+    <span class="text">{{no}}: {{presentedBy}} (0.1 points)</span>
+    {{#unless confirmed}}
+      <button class="delete">&times; Withdraw</button>
+    {{else}}
+      <span class="confirmed">Confirmed</span>
+    {{/unless}}
+  </li>
+</template>
+
+<template name="request">
+  <li>
+    <span class="text">{{no}}: {{presentedBy}}</span>
+    <button class="denyProof deny">&times; Deny</button>
+    <button class="confirmProof confirm">&check; Confirm</button>
+  </li>
+</template>
+
+<template name="reportProof">
+  <form class="report-proof">
+    <select name="no" id="no">
+    {{#each proofnos}}
+      <option value="{{no}}">{{no}}</option>
+    {{/each}}
+    </select>
+    <input type="text" name="presentedTo" id="presentedTo" placeholder="Presented to" disabled="disabled" />
+  </form>
+  {{#if due}}
+    <br /><br />
+    <h1>Upcoming deadlines (click to view qualified listeners)</h1>
+    <div id="due">
+      {{#each due}}
+        <h3 data-no="{{no}}">{{no}}: {{deadline}}</h3>
+        <div>{{#if session no}}{{#each usersForProof no}}{{this}}<br />{{/each}}{{/if}}</div>
+      {{/each}}
+    </div>
+  {{/if}}
+</template>
+
+<template name="admin">
+  {{#if unconfirmed.count}}
+    <h1>Unconfirmed users</h1>
+    <ul>
+      {{#each unconfirmed}}
+        <li>
+          <span class="text">{{profile.course}} {{username}} ({{profile.realName}}): {{emails.[0].address}} {{profile.huid}}</span>
+          <button class="denyUser deny">&times; Deny</button>
+          <button class="confirmUser confirm">&check; Confirm</button>
+        </li>
+      {{/each}}
+    </ul>
+    <br />
+  {{/if}}
+  <h1 data-scroll-index="4">Change proof list</h1>
+  <form class="change-proof">
+    <table>
+      <tr>
+        <td><select name="course">{{#each courses}}<option value="{{value}}">{{label}}</option>{{/each}}</select>: <input type="no" name="no" id="no" placeholder="Proof #" /></td><td>Release: <input type="text" name="release" class="datepicker" id="new-release" /></td><td>Due: <input type="text" name="due" class="datepicker" id="new-due" /></td><td><input type="submit" value="Add proof" /></td>
+      </tr>
+      {{#each proofnos}}
+        <tr>
+          <td>{{course}}: {{no}}</td><td>Release: <input type="text" class="datepicker release" value="{{release}}" /></td><td>Due: <input type="text" class="datepicker due" value="{{due}}" /></td><td><button class="delete">&times; Delete</button></td>
+        </tr>
+      {{/each}}
+    </table>
+  </form>
+  <br /><br />
+  <h1 data-scroll-index="5">Change user permissions</h1>
+  <form class="make-admin">
+    <select name="level" id="level">
+      <option value="1">Make student:</option>
+      <option value="2">Make CA:</option>
+      <option value="3">Make admin:</option>
+    </select>
+    <input type="text" name="adminify" id="adminify" placeholder="Name" />
+  </form>
+  <br /><br />
+  <h1>List students in course</h1>
+  <select id="courseForUsers">
+    <option value="">Choose course...</option>
+    {{#each courses}}
+      <option value="{{value}}">{{label}}</option>
+    {{/each}}
+  </select><br />
+  <table>
+    {{#each usersForCourse}}
+      <tr class="text"><td>{{profile.course}}</td><td>{{username}}</td><td>({{profile.realName}}):</td><td>{{points}}</td></tr><br />
+    {{/each}}
+  </table>
+  <h1>Delete course data</h1>
+  <button style="background-color: red" id="deleteCourses">Delete all users and proofs</button>
+  <br />
+  <h1>Create new course</h1>
+  <form class="add-course">
+    Name: <input type="text" name="name" id="courseName" value="Math 23" /> Early points: <input type="number" name="earlyPts" value="0.95" /> Late points: <input type="number" name="latePts" value="0.8" /> Listening points: <input type="number" name="listenPts" value="0.1" /><input type="submit" value="Create course" />
+  </form>
+</template>
+
+<template name="scrollBar">
+  <div id="scrollBar">
+    {{#unless currentUser.profile.isCA}}
+      <a data-scroll-nav="0">Report a proof</a>
+    {{/unless}}
+    {{#if pending.count}}
+      <a data-scroll-nav="1">Pending requests</a>
+    {{/if}}
+    {{#if proofs.count}}
+      <a data-scroll-nav="2">Presented proofs</a>
+    {{/if}}
+    {{#if heard.count}}
+      <a data-scroll-nav="3">Heard proofs</a>
+    {{/if}}
+    {{#if currentUser.profile.isAdmin}}
+      <a data-scroll-nav="4">Change proof list</a>
+      <a data-scroll-nav="5">Change user permissions</a>
+    {{/if}}
+  </div>
+</template>
